@@ -1,0 +1,12 @@
+*.fps
+clle.smi
+cldr.smi
+smidf.smi
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+smidfdr.smi
+Untitled*ipynb
+shit*
+checkpoint
+
