@@ -181,7 +181,7 @@ def remfps(name):
 
 
 ### Cluster from smiles df
-def clusmidf(smidf, th = 0.8, method = 'butina', arena = None):
+def clusmidf(smidf, th = 0.8, method = 'butina', arena = None, verb = True):
     
     if method != 'butina' and method != 'cl':
         print('Please select butina or cl')
@@ -238,7 +238,8 @@ def clusmidf(smidf, th = 0.8, method = 'butina', arena = None):
     # End time count and report
     end = time.time()
     elapsed_time = end - start
-    print('Clustering time: ' + time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
+    if verb:
+        print('Clustering time: ' + time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
     
     # Return cluster results
     return out
@@ -271,7 +272,7 @@ def gframecheck(s):
 
 
 ### Diversity analysis
-def divan(smidf, summ = False, OnlyBu = False, arena = None):
+def divan(smidf, summ = False, OnlyBu = False, arena = None, verb = True):
     
     start = time.time()
     
@@ -303,7 +304,8 @@ def divan(smidf, summ = False, OnlyBu = False, arena = None):
     
     end = time.time()
     eltime = end - start
-    print('Diversity analysis time: ' + time.strftime("%H:%M:%S", time.gmtime(eltime)))
+    if verb:
+        print('Diversity analysis time: ' + time.strftime("%H:%M:%S", time.gmtime(eltime)))
     
     if(summ):
         if(OnlyBu):
@@ -319,7 +321,7 @@ def divan(smidf, summ = False, OnlyBu = False, arena = None):
 
 
 ### Novelty analysis
-def novan(smidfq, smidft, th = 0.7, arq = None, art = None):
+def novan(smidfq, smidft, th = 0.7, arq = None, art = None, verb = True):
     
     start = time.time()
     
@@ -361,7 +363,9 @@ def novan(smidfq, smidft, th = 0.7, arq = None, art = None):
     
     end = time.time()
     eltime = end - start
-    print('Novelty analysis time: ' + time.strftime("%H:%M:%S", time.gmtime(eltime)))
+    
+    if verb:
+        print('Novelty analysis time: ' + time.strftime("%H:%M:%S", time.gmtime(eltime)))
     
     return news, fraq, newfraqs, gfraq, newgfraqs
 
@@ -459,17 +463,22 @@ def paintmultihist(prs, xlab, nrow, ncol, xtxt, ytxt, sizex, sizey, legx, legy, 
 
 
 
-### Whole diversity and novelty analysis for iterations
-def wholean(it, name_train = "train", name_pref = "unc", th = 0.7):
+### Whole diversity and novelty analysis for iterations for both unc and con, returning also clusters of input and outputs
+def wholean(it, name_train = "train", name_pref_un = "unc", name_pref_co = "con", th = 0.7, verb = True):
 
     nit = len(it)
     df = pd.DataFrame(np.nan, index = range(1, nit+1),\
                       columns =\
-                     ["# train","%corr inp","# un train","# clus inp","# fram inp","# gen fram inp",\
-                     "# out","%corr out","# un out","# clus out","# fram out","# gen fram out",\
-                     "% new str","% new fram","% new gen fram"])
+                     ["n.inp","%corr.inp","n.un.inp","n.clus.inp","n.fram.inp","n.gfram.inp","ag.d.inp",\
+                     "n.out.u","%corr.out.u","n.un.out.u","n.clus.out.u","n.fram.out.u","n.gfram.out.u","ag.d.out.u",\
+                     "%new.str.u","%new.fram.u","%new.gfram.u",
+                      "n.out.c","%corr.out.c","n.un.out.c","n.clus.out.c","n.fram.out.c","n.gfram.out.c","ag.d.out.c",\
+                     "%new.str.c","%new.fram.c","%new.gfram.c"
+                     ])
     
-    cls = [] # List with lists of clusters
+    clsi = []   # List with lists of clusters input
+    clso_u = [] # List with lists of clusters output un
+    clso_c = [] # List with lists of clusters output co
     
     for i in range(len(it)):
     
@@ -480,46 +489,77 @@ def wholean(it, name_train = "train", name_pref = "unc", th = 0.7):
         nuntrain = len(smis)
         smidft = smis2smidf(smis)
         del smis
-        df["# train"].iloc[i] = n
-        df["%corr inp"].iloc[i] = round(ncorr/float(n)*100,2)
-        df["# un train"].iloc[i] = nuntrain
+        df["n.inp"].iloc[i] = n
+        df["%corr.inp"].iloc[i] = round(ncorr/float(n)*100,2)
+        df["n.un.inp"].iloc[i] = nuntrain
     
-        # Find corrects and unique in output 
-        smis = smif2smis('./' + name_pref +str(it[i]) + '.smi')
+        # Find corrects and unique in un output 
+        smis = smif2smis('./' + name_pref_un + str(it[i]) + '.smi')
         ncorr, n, smis, wrongsmis = corrsmis(smis)
         smis = list(set(smis))
         nunout = len(smis)
-        smidfq = smis2smidf(smis)
+        smidfq_u = smis2smidf(smis)
         del smis
-        df["# out"].iloc[i] = n
-        df["%corr out"].iloc[i] = round(ncorr/float(n)*100,2)
-        df["# un out"].iloc[i] = nunout
+        df["n.out.u"].iloc[i] = n
+        df["%corr.out.u"].iloc[i] = round(ncorr/float(n)*100,2)
+        df["n.un.out.u"].iloc[i] = nunout
+        nout_u = n
+        
+        # Find corrects and unique in co output 
+        smis = smif2smis('./' + name_pref_co + str(it[i]) + '.smi')
+        ncorr, n, smis, wrongsmis = corrsmis(smis)
+        smis = list(set(smis))
+        nunout = len(smis)
+        smidfq_c = smis2smidf(smis)
+        del smis
+        df["n.out.c"].iloc[i] = n
+        df["%corr.out.c"].iloc[i] = round(ncorr/float(n)*100,2)
+        df["n.un.out.c"].iloc[i] = nunout
+        nout_c = n
         
         # Generate arenas
         art = smidf2arena(smidft)
-        arq = smidf2arena(smidfq)
+        arq_u = smidf2arena(smidfq_u)
+        arq_c = smidf2arena(smidfq_c)
     
         # Diversity analysis of input and fill nclus inp, nfram inp, ngenfram inp
-        clb, fs, fg = divan(smidft, OnlyBu = True, arena = art)
-        df["# clus inp"].iloc[i] = len(clb)
-        df["# fram inp"].iloc[i] = len(fs)
-        df["# gen fram inp"].iloc[i] = len(fg)
-        cls.append(clb)
+        clb, fs, fg, ag_d = divan(smidft, OnlyBu = True, arena = art, verb = verb)
+        df["n.clus.inp"].iloc[i] = len(clb)
+        df["n.fram.inp"].iloc[i] = len(fs)
+        df["n.gfram.inp"].iloc[i] = len(fg)
+        df["ag.d.inp"].iloc[i] = ag_d
+        clsi.append(clb)
     
-        # Diversity analysis of output and fill nclus out, nfram out, ngenfram out
-        clb, fs, fg = divan(smidfq, OnlyBu = True, arena = arq)
-        df["# clus out"].iloc[i] = len(clb)
-        df["# fram out"].iloc[i] = len(fs)
-        df["# gen fram out"].iloc[i] = len(fg)
+        # Diversity analysis of output un and fill nclus out, nfram out, ngenfram out of un
+        clb, fs, fg, ag_d = divan(smidfq_u, OnlyBu = True, arena = arq_u, verb = verb)
+        df["n.clus.out.u"].iloc[i] = len(clb)
+        df["n.fram.out.u"].iloc[i] = len(fs)
+        df["n.gfram.out.u"].iloc[i] = len(fg)
+        df["ag.d.out.u"].iloc[i] = ag_d
+        clso_u.append(clb)
     
-        # Novelty analysis
-        news, fraq, newfraqs, gfraq, newgfraqs = novan(smidfq, smidft, th = th, arq = arq, art = art)
-        df["% new str"].iloc[i] = round(100*len(news)/float(smidfq.shape[0]),2)
-        df["% new fram"].iloc[i] = round(100*len(newfraqs)/float(len(fraq)),2)
-        df["% new gen fram"].iloc[i] = round(100*len(newgfraqs)/float(len(gfraq)),2)
+        # Diversity analysis of output co and fill nclus out, nfram out, ngenfram out of co
+        clb, fs, fg, ag_d = divan(smidfq_c, OnlyBu = True, arena = arq_c, verb = verb)
+        df["n.clus.out.c"].iloc[i] = len(clb)
+        df["n.fram.out.c"].iloc[i] = len(fs)
+        df["n.gfram.out.c"].iloc[i] = len(fg)
+        df["ag.d.out.c"].iloc[i] = ag_d
+        clso_c.append(clb)
+        
+        # Novelty analysis of un 
+        news, fraq, newfraqs, gfraq, newgfraqs = novan(smidfq_u, smidft, th = th, arq = arq_u, art = art, verb = verb)
+        df["%new.str.u"].iloc[i] = round(100*len(news)/float(smidfq_u.shape[0]),2)
+        df["%new.fram.u"].iloc[i] = round(100*len(newfraqs)/float(len(fraq)),2)
+        df["%new.gfram.u"].iloc[i] = round(100*len(newgfraqs)/float(len(gfraq)),2)
+        
+        # Novelty analysis of co
+        news, fraq, newfraqs, gfraq, newgfraqs = novan(smidfq_c, smidft, th = th, arq = arq_u, art = art, verb = verb)
+        df["%new.str.c"].iloc[i] = round(100*len(news)/float(nout_u),2)
+        df["%new.fram.c"].iloc[i] = round(100*len(newfraqs)/float(nout_c),2)
+        df["%new.gfram.c"].iloc[i] = round(100*len(newgfraqs)/float(len(gfraq)),2)
                             
     # Return dataframe with output
-    return df, cls
+    return df, clsi, clso_u, clso_c
 
 
 ### Whole diversity and novelty analysis for iterations, returning in the output also the clusters of the outputs
